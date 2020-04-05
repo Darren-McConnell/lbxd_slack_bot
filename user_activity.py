@@ -2,13 +2,13 @@ import os
 import csv
 import datetime
 import json
+import letterboxd
 import requests
 import slack
 
 # local imports
 import config_utils
 from lbxd_client import LbxdClient
-
 
 URL_BASE = 'https://letterboxd.com/'
 MAX_ACTIVITIES = 20
@@ -87,9 +87,9 @@ def parse_activity(activity):
 
 class UserActivity():
     def __init__(self, lbxd_key, lbxd_secret):
-        self.client = LbxdClient(
-                key=lbxd_key,
-                secret=lbxd_secret)
+        self.lbxd_client = letterboxd.new(
+                api_key=lbxd_key,
+                api_secret=lbxd_secret)        
 
     @staticmethod
     def _get_lid(username):
@@ -105,46 +105,49 @@ class UserActivity():
 
     def add_user(self, username):
         user_config = config_utils.get_user_config()
+        if username in user_config.keys():
+            return f'"{username}" is already being tracked by lbxd_bot'
+
         lid = self._get_lid(username)
         if not lid:
-            message = f'Letterboxd user "{username}" doesn\'t appear to exist'
-        elif username in user_config.keys():
-            message = f'"{username}" is already being tracked by lbxd_bot'
-        else:
-            user_config.update({username: {'lid': lid, 'last_update': ''}})
-            config_utils.write_config(user_config)
-            message = f'"{username}" has been added to lbxd_bot'
-        return message
+            return f'Letterboxd user "{username}" doesn\'t appear to exist'
+
+        user_config.update({username: {'lid': lid, 'last_update': ''}})
+        config_utils.write_config(user_config)
+        return f'"{username}" has been added to lbxd_bot'
+
 
     def remove_user(self, username):
         user_config = config_utils.get_user_config()
-        if username in user_config.keys():
-            del user_config[username]
-            config_utils.write_config(user_config)
-            message = f'"{username}" is no longer being tracked by lbxd_bot'
-        else:
-            message = f'"{username}" wasn\'t being tracked by lbxd_bot'
-        return message
+        if username not in user_config.keys():
+            return f'"{username}" isn\'t being tracked by lbxd_bot'
+
+        del user_config[username]
+        config_utils.write_config(user_config)
+        return f'"{username}" is no longer being tracked by lbxd_bot'
+
 
     def _get_user_activity(self, username):
         users = config_utils.get_user_config()
-        activity_resp = self.client.get_member_activity(
-                member_id=users[username]['lid'],
-                where='OwnActivity',
-                perPage=MAX_ACTIVITIES)
+        lid = users[username]['lid']
+        params_dict = {'where': 'OwnActivity', 'perPage': MAX_ACTIVITIES}
+        activity_resp = self.lbxd_client.api.api_call(
+                path=f'member/{lid}/activity',
+                params=params_dict)
         return activity_resp.json()['items']
 
     def user_activities(self, username):
         users = config_utils.get_user_config()
         last_upd_time = users[username]['last_update']
-        if not last_upd_time:
-            return []
 
         resp_json = self._get_user_activity(username)
         config_utils.set_config_value(
                 username=username,
                 field='last_update',
                 value=resp_json[0]['whenCreated'])
+
+        if not last_upd_time:
+            return []
 
         new_items = [j for j in resp_json if 
                     (j['whenCreated'] > last_upd_time) & 
