@@ -16,7 +16,7 @@ In the _OAuth & Permissions_ section, add the Bot Token Scopes `chat:write` & `c
 
 You need to configure 2 slash commands to interact with the app, but you'll need a target host address first. If you want to test locally, you can use a secure tunnelling service to test. Ngrok is a simple tool for this use case.
 
-## Ngrok
+## Testing with Ngrok
 
 Download and install [from here](https://ngrok.com/download). Once installed, start it up and run: `Ngrok http 5000`.
 

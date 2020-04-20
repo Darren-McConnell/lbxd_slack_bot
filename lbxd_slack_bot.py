@@ -54,11 +54,15 @@ def format_block(activity):
 def activity_check():
     print('checking activities')
     activities = lbxd_handler.new_activities_check()
-    print('activity check complete, posting results to slack')
-    for a in activities:
-        slack_client.chat_postMessage(
-                channel=film_chat_id, blocks=format_block(a))
-    print('posting complete')
+    print('activity check complete')
+    if len(activities) == 0:
+        print('no new activities')
+    else:
+        print('posting activities to slack')
+        for a in activities:
+            slack_client.chat_postMessage(
+                    channel=film_chat_id, blocks=format_block(a))
+        print('posting complete')
 
 scheduler.add_job(activity_check, 'interval', minutes=1)
 scheduler.start()
