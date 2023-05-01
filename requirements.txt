@@ -1,5 +1,5 @@
 apscheduler==3.6.3
-flask==1.1.1
+flask==2.3.2
 python-dotenv==0.10.3
 letterboxd==0.3.0
 requests==2.22.0
